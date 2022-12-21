@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const slugify = require('slugify');
 const validator = require('validator');
-// const User = require('./userModel');
+const User = require('./userModel');
 
 // CREATING A SCHEMA
 const tourSchema = new mongoose.Schema(
@@ -37,6 +37,7 @@ const tourSchema = new mongoose.Schema(
       default: 4.5,
       min: [1, 'RAting must be above 1.0'],
       max: [5, 'RAting must be below 5.0'],
+      set: val=> Math.round(val * 10)/10
     },
     ratingsQuantity: {
       type: Number,
@@ -107,6 +108,11 @@ const tourSchema = new mongoose.Schema(
   }
 );
 
+
+// tourSchema.index({price:1})
+tourSchema.index({price:1, ratingsAverage:-1})
+tourSchema.index({slug:1})
+tourSchema.index({startLocation:'2dsphere'})
 // Creting a virtual property in our schema
 tourSchema.virtual('durationWeeks').get(function () {
   return this.duration / 7;
@@ -159,10 +165,10 @@ tourSchema.post(/^find/, function (docs, next) {
 });
 
 // Aggregation Middleware
-tourSchema.pre('aggregate', function (next) {
-  this.pipeline().unshift({ $match: { secretTour: { $ne: true } } });
-  next();
-});
+// tourSchema.pre('aggregate', function (next) {
+//   this.pipeline().unshift({ $match: { secretTour: { $ne: true } } });
+//   next();
+// });
 
 // CREATING A MODEL
 const Tour = mongoose.model('Tour', tourSchema);

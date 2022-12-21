@@ -10,12 +10,41 @@ const mongoSanitize = require('express-mongo-sanitize');
 const xss = require('xss-clean');
 const hpp = require('hpp');
 const reviewRoute = require('./routes/reviewRoutes');
+const path = require('path')
+const viewRouter = require('./routes/viewRoutes')
+const cookieParser = require('cookie-parser')
+
 
 const app = express();
 
+app.set('view engine', 'pug')
+app.set('views', path.join(__dirname, 'views'))
+// SERVING STATIC FILES
+// app.use(express.static(`${__dirname}/public`));
+app.use(express.static(path.join(__dirname, 'public')));
+
 // MIDDLE WARES
 console.log(process.env.NODE_ENV);
-app.use(helmet());
+app.use(
+  helmet.contentSecurityPolicy({
+    directives: {
+      defaultSrc: ["'self'", 'data:', 'blob:', 'unsafe-inline'],
+ 
+      fontSrc: ["'self'", 'https:', 'data:'],
+
+      scriptSrc: ["'self'", 'unsafe-inline'],
+ 
+      scriptSrc: ["'self'", 'https://cloudflare.com/'],
+ 
+      scriptSrcElem: ["'self'",'https:', 'https://cloudflare.com/'],
+ 
+      styleSrc: ["'self'", 'https:', 'unsafe-inline', 'ws://localhost:*', 'unsafe-hashes'],
+      
+      connectSrc: ["'self'", 'data', 'https://cloudflare.com/', 'ws://localhost:*']
+    },
+  })
+);
+// app.use(helmet());
 if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'));
 }
@@ -28,13 +57,13 @@ const limiter = rateLimit({
 app.use('/api', limiter);
 
 app.use(express.json({ limit: '10kb' }));
+app.use(express.urlencoded({extended:true, limit: '10kb'}))
+app.use(cookieParser())
 
 app.use(mongoSanitize());
 app.use(xss());
 app.use(hpp());
 
-// SERVING STATIC FILES
-app.use(express.static(`${__dirname}/public`));
 
 app.use((req, res, next) => {
   // console.log('hello from the middleware');
@@ -44,6 +73,7 @@ app.use((req, res, next) => {
 });
 
 // ROUTES MIDDLEWARES
+app.use('/', viewRouter)
 app.use('/api/v1/tours', tourRoute);
 app.use('/api/v1/users', userRoute);
 app.use('/api/v1/reviews', reviewRoute);
